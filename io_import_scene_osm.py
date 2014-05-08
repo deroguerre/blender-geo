@@ -15,13 +15,16 @@ bl_info = {
 	"support": "COMMUNITY",
 	"category": "Import-Export",
 }
-
+import sys, os
+import math
+import os, math
 import bpy, bmesh
+import bmesh
+
 # ImportHelper is a helper class, defines filename and invoke() function which calls the file selector
 from bpy_extras.io_utils import ImportHelper
 
-import sys, os
-import math
+
 
 # see conversion formulas at
 # http://en.wikipedia.org/wiki/Transverse_Mercator_projection
@@ -57,7 +60,8 @@ class TransverseMercator:
 
 		lon = self.lon + math.degrees(lon)
 		lat = math.degrees(lat)
-		return (lat, lon)
+		return (lat, lon)
+
 import xml.etree.cElementTree as etree
 import inspect, importlib
 
@@ -199,10 +203,9 @@ class OsmParser:
 			elif lat>self.maxLat: self.maxLat = lat
 			if lon<self.minLon: self.minLon = lon
 			elif lon>self.maxLon: self.maxLon = lon
-		self.iterate(wayFunction, nodeFunction)
-import os, math
-import bpy, bmesh
-import bmesh
+		self.iterate(wayFunction, nodeFunction)
+
+
 
 def extrudeMesh(bm, thickness):
 	"""
@@ -210,10 +213,12 @@ def extrudeMesh(bm, thickness):
 	"""
 	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
 	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
-	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
+	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
+
 def assignTags(obj, tags):
 	for key in tags:
-		obj[key] = tags[key]
+		obj[key] = tags[key]
+
 
 class buildings:
 	@staticmethod
@@ -308,125 +313,9 @@ class highways:
 			# final adjustments
 			obj.select = True
 			# assign OSM tags to the blender object
-			assignTags(obj, tags)
-import os, math
-import bpy, bmesh
-import bmesh
-
-def extrudeMesh(bm, thickness):
-	"""
-	Extrude bmesh
-	"""
-	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
-	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
-	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
-def assignTags(obj, tags):
-	for key in tags:
-		obj[key] = tags[key]
-
-class buildings:
-	@staticmethod
-	def condition(tags, way):
-		return "building" in tags
-	
-	@staticmethod
-	def handler(way, parser, kwargs):
-		wayNodes = way["nodes"]
-		numNodes = len(wayNodes)-1 # we need to skip the last node which is the same as the first ones
-		# a polygon must have at least 3 vertices
-		if numNodes<3: return
-		
-		if not kwargs["bm"]: # not a single mesh
-			tags = way["tags"]
-			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
-			osmId = way["id"]
-			# compose object name
-			name = osmId
-			if "addr:housenumber" in tags and "addr:street" in tags:
-				name = tags["addr:street"] + ", " + tags["addr:housenumber"]
-			elif "name" in tags:
-				name = tags["name"]
-		
-		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
-		verts = []
-		for node in range(numNodes):
-			node = parser.nodes[wayNodes[node]]
-			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
-			verts.append( bm.verts.new((v[0], v[1], 0)) )
-		
-		bm.faces.new(verts)
-		
-		if not kwargs["bm"]:
-			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
-			# extrude
-			if thickness>0:
-				extrudeMesh(bm, thickness)
-			
-			bm.normal_update()
-			
-			mesh = bpy.data.meshes.new(osmId)
-			bm.to_mesh(mesh)
-			
-			obj = bpy.data.objects.new(name, mesh)
-			bpy.context.scene.objects.link(obj)
-			bpy.context.scene.update()
-			
-			# final adjustments
-			obj.select = True
-			# assign OSM tags to the blender object
 			assignTags(obj, tags)
 
 
-class highways:
-	@staticmethod
-	def condition(tags, way):
-		return "highway" in tags
-	
-	@staticmethod
-	def handler(way, parser, kwargs):
-		wayNodes = way["nodes"]
-		numNodes = len(wayNodes) # we need to skip the last node which is the same as the first ones
-		# a way must have at least 2 vertices
-		if numNodes<2: return
-		
-		if not kwargs["bm"]: # not a single mesh
-			tags = way["tags"]
-			osmId = way["id"]
-			# compose object name
-			name = tags["name"] if "name" in tags else osmId
-		
-		bm = kwargs["bm"] if kwargs["bm"] else bmesh.new()
-		verts = []
-		prevVertex = None
-		for node in range(numNodes):
-			node = parser.nodes[wayNodes[node]]
-			v = kwargs["projection"].fromGeographic(node["lat"], node["lon"])
-			v = bm.verts.new((v[0], v[1], 0))
-			if prevVertex:
-				bm.edges.new([prevVertex, v])
-			prevVertex = v
-		
-		if not kwargs["bm"]:
-			mesh = bpy.data.meshes.new(osmId)
-			bm.to_mesh(mesh)
-			
-			obj = bpy.data.objects.new(name, mesh)
-			bpy.context.scene.objects.link(obj)
-			bpy.context.scene.update()
-			
-			# final adjustments
-			obj.select = True
-			# assign OSM tags to the blender object
-			assignTags(obj, tags)
-import bmesh
-
-def extrudeMesh(bm, thickness):
-	"""
-	Extrude bmesh
-	"""
-	geom = bmesh.ops.extrude_face_region(bm, geom=bm.faces)
-	verts_extruded = [v for v in geom["geom"] if isinstance(v, bmesh.types.BMVert)]
-	bmesh.ops.translate(bm, verts=verts_extruded, vec=(0, 0, thickness))
 
 class ImportOsm(bpy.types.Operator, ImportHelper):
 	"""Import a file in the OpenStreetMap format (.osm)"""
@@ -580,4 +469,5 @@ def register():
 
 def unregister():
 	bpy.utils.unregister_class(ImportOsm)
-	bpy.types.INFO_MT_file_import.remove(menu_func_import)
+	bpy.types.INFO_MT_file_import.remove(menu_func_import)
+
