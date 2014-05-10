@@ -253,7 +253,20 @@ class buildings:
 		bm.faces.new(verts)
 		
 		if not kwargs["bm"]:
-			thickness = kwargs["thickness"] if ("thickness" in kwargs) else 0
+
+			if "height" in tags:
+				thickness = float(tags["height"])
+
+			else:
+				if "building:levels" in tags:
+					buildingLevel = tags["building:levels"]
+				else:
+					buildingLevel = kwargs["defaultLevel"] if ("defaultLevel" in kwargs) else 0
+				
+				buildingHeight = kwargs["thickness"] if ("thickness" in kwargs) else 0
+
+				thickness = float(buildingLevel) * buildingHeight
+			
 			# extrude
 			if thickness>0:
 				extrudeMesh(bm, thickness)
@@ -355,11 +368,19 @@ class ImportOsm(bpy.types.Operator, ImportHelper):
 		default=False,
 	)
 
+	defaultLevel = bpy.props.IntProperty(
+		name="default building level",
+		description="Set thickness to make OSM building outlines extruded",
+		default=2,
+	)
+
 	thickness = bpy.props.FloatProperty(
 		name="Thickness",
 		description="Set thickness to make OSM building outlines extruded",
-		default=0,
+		default=2.5,
 	)
+
+
 
 	def execute(self, context):
 		# setting active object if there is no active object
@@ -455,6 +476,7 @@ class ImportOsm(bpy.types.Operator, ImportHelper):
 		osm.parse(
 			projection = TransverseMercator(lat=lat, lon=lon),
 			thickness = self.thickness,
+			defaultLevel = self.defaultLevel,
 			bm = self.bm # if present, indicates the we need to create as single mesh
 		)
 
