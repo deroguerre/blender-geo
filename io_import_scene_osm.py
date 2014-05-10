@@ -254,11 +254,11 @@ class buildings:
 		
 		if not kwargs["bm"]:
 
-			if "height" in tags:
+			if "height" in tags and tags["height"].isnumeric():
 				thickness = float(tags["height"])
 
 			else:
-				if "building:levels" in tags:
+				if "building:levels" in tags and tags["building:levels"].isnumeric():
 					buildingLevel = tags["building:levels"]
 				else:
 					buildingLevel = kwargs["defaultLevel"] if ("defaultLevel" in kwargs) else 0
